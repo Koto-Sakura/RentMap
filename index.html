@@ -1,102 +1,58 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <title>租房通勤比选器</title>
-    <!-- 引入 Leaflet 的 CSS 和 JS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <style>
-        body { margin: 0; padding: 0; display: flex; height: 100vh; font-family: sans-serif; }
-        #sidebar { width: 350px; padding: 15px; background: #f8f9fa; overflow-y: auto; border-right: 1px solid #ddd; }
-        #map { flex: 1; }
-        .input-group { margin-bottom: 15px; }
-        input { width: 100%; padding: 8px; box-sizing: border-box; margin-top: 5px; }
-        button { width: 100%; padding: 10px; background: #007bff; color: white; border: none; cursor: pointer; margin-top: 5px; }
-        button:hover { background: #0056b3; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="比较多个小区到公司的驾车距离、时长和月租，数据保存在本机。">
+  <title>租房通勤比选器</title>
+  <!-- Leaflet 仅负责渲染；高德瓦片、POI 和驾车几何直接使用 GCJ-02。 -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="styles.css">
+  <!-- 经典脚本可直接打开 HTML；defer 保持配置 → 依赖 → 解析 → 页面顺序。 -->
+  <script defer src="config.js"></script>
+  <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script defer src="core.js"></script>
+  <script defer src="app.js"></script>
 </head>
 <body>
-
-    <div id="sidebar">
-        <h3>租房通勤比选</h3>
-        
-        <div class="input-group">
-            <label>高德 API Key：</label>
-            <input type="text" id="apiKey" placeholder="请输入你的 Web服务 Key">
-        </div>
-
-        <div class="input-group">
-            <label>起点（公司）：</label>
-            <input type="text" id="originInput" placeholder="输入公司名称搜索">
-            <button onclick="searchOrigin()">搜索并设为起点</button>
-        </div>
-
-        <div class="input-group">
-            <label>终点（房源）：</label>
-            <input type="text" id="destInput" placeholder="输入小区名称搜索">
-            <button onclick="searchDest()">搜索并添加终点</button>
-        </div>
-
-        <div class="input-group">
-            <button onclick="calculateRoutes()" style="background: #28a745;">计算所有驾车路线</button>
-        </div>
-        
-        <!-- 这里将来放结果表格 -->
-        <div id="results"></div>
-    </div>
-
-    <div id="map"></div>
-
-    <script>
-        // 1. 初始化地图（使用高德底图，保持 GCJ-02 坐标系）
-        const map = L.map('map').setView([30.2741, 120.1551], 12); // 默认杭州
-        
-        L.tileLayer('https://webrd0{1-4}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
-            maxZoom: 18,
-            attribution: '© 高德地图'
-        }).addTo(map);
-
-        // 2. 全局变量
-        let originMarker = null;
-        let originCoords = null; // { lng, lat }
-        let destinations = [];   // [{ id, name, lng, lat, marker, routeLine }]
-
-        // 3. 搜索起点逻辑（需要你补充完成）
-        async function searchOrigin() {
-            const key = document.getElementById('apiKey').value;
-            const keyword = document.getElementById('originInput').value;
-            if (!key || !keyword) return alert('请填写 Key 和搜索词');
-            
-            // TODO: 使用 fetch 调用高德关键字搜索 API
-            // TODO: 获取第一个结果，提取经纬度
-            // TODO: 在地图上添加红色 Marker，并保存到 originCoords
-            console.log("准备搜索起点:", keyword);
-        }
-
-        // 4. 搜索终点逻辑（需要你补充完成）
-        async function searchDest() {
-            const key = document.getElementById('apiKey').value;
-            const keyword = document.getElementById('destInput').value;
-            if (!key || !keyword) return alert('请填写 Key 和搜索词');
-
-            // TODO: 使用 fetch 调用高德关键字搜索 API
-            // TODO: 获取第一个结果，提取经纬度
-            // TODO: 在地图上添加蓝色 Marker，并 push 到 destinations 数组
-            console.log("准备搜索终点:", keyword);
-        }
-
-        // 5. 计算路线逻辑（需要你补充完成）
-        async function calculateRoutes() {
-            if (!originCoords) return alert('请先设置起点');
-            if (destinations.length === 0) return alert('请先添加终点');
-            const key = document.getElementById('apiKey').value;
-
-            // TODO: 遍历 destinations，对每一个调用高德驾车路线规划 API
-            // TODO: 根据返回的 steps 绘制彩色折线（L.polyline）
-            // TODO: 将距离、时长渲染到侧边栏的 results 中
-            console.log("准备计算路线...");
-        }
-    </script>
+  <div class="app-shell">
+    <aside id="sidebar" aria-label="通勤比选设置">
+      <header class="brand"><span class="brand-icon" aria-hidden="true">⌂</span><div><h1>租房通勤比选器</h1><p>找到住得舒服、通勤更轻松的家</p></div></header>
+      <section class="sidebar-section" aria-labelledby="configHeading">
+        <h2 id="configHeading"><span class="step-number">01</span> 配置地图服务</h2>
+        <label for="apiKey">高德 Web 服务 API Key</label>
+        <input id="apiKey" type="password" autocomplete="off" spellcheck="false" placeholder="输入你的 Web 服务 Key">
+        <div class="config-actions"><button id="saveConfigBtn" type="button" class="button secondary">保存配置</button><button id="exportConfigBtn" type="button" class="button secondary">导出配置</button></div>
+        <label for="cityInput">搜索城市 <span class="muted">（留空搜索全国）</span></label>
+        <input id="cityInput" type="text" value="杭州" placeholder="例如：杭州">
+        <p class="hint">配置读取自 config.js。保存仅写入当前浏览器；导出后可手动替换配置文件。Key 在纯前端中可见，仅建议本机使用。</p>
+      </section>
+      <section class="sidebar-section" aria-labelledby="searchHeading">
+        <h2 id="searchHeading"><span class="step-number">02</span> 设置通勤地点</h2>
+        <form id="originForm"><label for="originInput"><span class="point-dot origin-dot"></span> 公司 · 起点</label><div class="search-field"><input id="originInput" type="search" placeholder="输入公司名称" autocomplete="off"><button id="originSearchBtn" type="submit" class="button primary">搜索</button></div></form>
+        <div id="originInfo" class="origin-card" aria-live="polite"></div>
+        <form id="destForm"><label for="destInput"><span class="point-dot destination-dot"></span> 小区 · 终点</label><div class="search-field"><input id="destInput" type="search" placeholder="输入小区名称" autocomplete="off"><button id="destSearchBtn" type="submit" class="button primary">添加</button></div></form>
+        <p class="hint">搜索取第一个结果，请核对名称和地址。起点变更后需重新计算。</p>
+      </section>
+      <section class="sidebar-section destination-section" aria-labelledby="destinationHeading">
+        <div class="section-heading"><h2 id="destinationHeading"><span class="step-number">03</span> 候选小区</h2><span id="destinationCount" class="count-badge">0</span></div><div id="destinationsList"></div>
+      </section>
+      <div class="sidebar-footer"><button id="calculateBtn" type="button" class="button primary calculate-button" disabled>一键计算所有路线</button><button id="clearBtn" type="button" class="button clear-button">清空所有数据</button><p class="hint">地点与月租自动保存在当前浏览器。</p></div>
+    </aside>
+    <main class="workspace">
+      <header class="workspace-header"><div><p class="eyebrow">COMMUTE COMPARE</p><h2>通勤，一目了然</h2></div><div class="workspace-tools"><span class="coordinate-badge">GCJ-02 · 高德底图</span><button id="fitAllBtn" class="button secondary" type="button">查看全部</button></div></header>
+      <div id="status" class="status-bar" role="status" aria-live="polite">正在加载地图…</div>
+      <section class="map-section" aria-label="驾车路线地图"><div id="map" aria-label="杭州及候选小区地图"></div><div id="mapFallback" class="map-fallback" hidden></div><div class="map-legend"><span><i class="point-dot origin-dot"></i>公司</span><span><i class="point-dot destination-dot"></i>候选小区 A / B / C</span><span>彩色线 · 驾车路线</span></div></section>
+      <section class="results-section" aria-labelledby="resultsHeading">
+        <div class="results-header"><div><h2 id="resultsHeading">小区通勤对比</h2><p id="routeSummary" class="muted">共 0 个小区 · 成功 0 · 失败 0</p></div><button id="resetHighlightBtn" type="button" class="button secondary" disabled>取消高亮</button></div>
+        <div class="table-scroll"><table>
+          <caption class="sr-only">小区驾车通勤距离、预计时长与月租对比。点击数值表头排序，点击行或按回车高亮地图路线。</caption>
+          <thead><tr><th scope="col">序号</th><th scope="col">小区名称</th><th scope="col" data-sort="distance" aria-sort="none"><button type="button">距离(km) <span class="sort-icon" aria-hidden="true">↕</span></button></th><th scope="col" data-sort="duration" aria-sort="none"><button type="button">时长(分钟) <span class="sort-icon" aria-hidden="true">↕</span></button></th><th scope="col" data-sort="rent" aria-sort="none"><button type="button">月租(元) <span class="sort-icon" aria-hidden="true">↕</span></button></th><th scope="col">操作</th></tr></thead><tbody id="resultsBody"></tbody>
+        </table></div>
+        <div id="emptyResults" class="empty-results"><span aria-hidden="true">⌁</span><h3>先添加几个心仪的小区</h3><p>计算路线后，距离、时长和月租会在这里并排显示。</p></div>
+        <p class="results-note">点击距离、时长或月租表头排序；点击行高亮对应路线。结果为公司 → 小区的单程驾车估算，不含实时拥堵，反向通勤可能不同。</p>
+      </section>
+    </main>
+  </div>
 </body>
 </html>
